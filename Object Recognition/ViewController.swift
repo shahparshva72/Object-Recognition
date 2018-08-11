@@ -8,6 +8,8 @@
 
 import UIKit
 import AVKit
+import AVFoundation
+import CoreML
 import Vision
 
 class ViewController: UIViewController {
@@ -31,12 +33,30 @@ class ViewController: UIViewController {
         
         previewLayer.frame = view.frame
         let dataOutput = AVCaptureVideoDataOutput()
+        dataOutput.setSampleBufferDelegate(self as? AVCaptureVideoDataOutputSampleBufferDelegate, queue: DispatchQueue(label:"videoQueue"))
         captureSession.addOutput(dataOutput)
-        
-        //let request = VNCoreMLRequest(model: <#T##VNCoreMLModel#>, completionHandler: <#T##VNRequestCompletionHandler?##VNRequestCompletionHandler?##(VNRequest, Error?) -> Void#>)
-        //VNImageRequestHandler(cgImage: CGImage,options:[:].perform[requests:VNRequest[])
-    }
 
+    }
+    
+    func captureOutput(_ output:AVCaptureOutput,didOutput sampleBuffer: CMSampleBuffer,from connection:AVCaptureConnection){
+        guard let pixelBuffer: CVPixelBuffer = (CMSampleBufferGetDataBuffer(sampleBuffer) as! CVPixelBuffer) else {
+            return
+        }
+        
+        guard let model  = try? VNCoreMLModel(for: SqueezeNet().model) else {return }
+        let request = VNCoreMLRequest(model: model){
+            (finishedReq,err) in
+            
+           // print(finishedReq.results!)
+            
+            guard let results = finishedReq.results as? [VNClassificationObservation] else {return }
+            
+            guard results.first != nil else {return }
+        }
+        
+        try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer,options:[ : ]).perform([request])
+    }
+    
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
         // Dispose of any resources that can be recreated.
