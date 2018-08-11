@@ -51,7 +51,9 @@ class ViewController: UIViewController {
             
             guard let results = finishedReq.results as? [VNClassificationObservation] else {return }
             
-            guard results.first != nil else {return }
+            guard let firstObservation = results.first else {return }
+            
+            print(firstObservation.identifier,firstObservation.confidence)
         }
         
         try? VNImageRequestHandler(cvPixelBuffer: pixelBuffer,options:[ : ]).perform([request])
